@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Classroom Game · Host</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23ffd23f%22/><text x=%2250%22 y=%2270%22 font-size=%2260%22 text-anchor=%22middle%22>?</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ============ Sets (home) ============ -->
+  <div id="view-home" hidden>
+    <header class="host-header">
+      <div class="brand"><span class="brand-mark">?</span> Classroom Game</div>
+      <span class="muted">Host</span>
+      <span class="spacer"></span>
+      <a class="btn btn-ghost btn-small" href="./" target="_blank" rel="noopener">Open student page ↗</a>
+    </header>
+    <main class="view">
+      <div id="resumeBanner" class="banner" hidden></div>
+
+      <h1>Your question sets</h1>
+      <div class="toolbar">
+        <button class="btn btn-primary" id="btnNewSet">＋ New set</button>
+        <button class="btn" id="btnPaste">📋 Paste questions</button>
+        <button class="btn" id="btnImport">⬆ Import backup (JSON)</button>
+        <button class="btn" id="btnExportAll">⬇ Export all sets (JSON)</button>
+        <input type="file" id="importFile" accept=".json,application/json" hidden>
+      </div>
+      <div id="setGrid" class="set-grid"></div>
+
+      <h2 style="margin-top:2em">Past game results</h2>
+      <p class="muted">Saved only in this browser on this laptop. Download the CSV for your records.</p>
+      <div id="historyList" class="history-list"></div>
+    </main>
+  </div>
+
+  <!-- ============ Editor ============ -->
+  <div id="view-editor" hidden>
+    <header class="host-header">
+      <button class="btn btn-ghost btn-small" id="btnEditorBack">← All sets</button>
+      <div class="brand"><span class="brand-mark">?</span> Edit set</div>
+      <span class="spacer"></span>
+      <span class="save-state" id="saveState">All changes saved</span>
+    </header>
+    <main class="view">
+      <div class="editor-head">
+        <input class="editor-title" id="setTitle" maxlength="120" placeholder="Set title, e.g. Lecture 3: The Bill of Rights" aria-label="Set title">
+      </div>
+      <div class="row" style="margin-bottom:1.2em">
+        <button class="btn btn-primary" id="btnEditorPlay">▶ Play live</button>
+        <button class="btn" id="btnEditorProjector">📽 Projector mode</button>
+        <button class="btn" id="btnEditorPaste">📋 Paste more questions</button>
+        <button class="btn" id="btnEditorCopyText">📄 Copy as text</button>
+        <span class="spacer"></span>
+        <span class="muted" id="editorCount"></span>
+      </div>
+      <div id="questionList"></div>
+      <div class="add-row">
+        <button class="btn" data-add="mc">＋ Multiple choice</button>
+        <button class="btn" data-add="tf">＋ True or false</button>
+        <button class="btn" data-add="id">＋ Identification</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- ============ Live game ============ -->
+  <div id="view-game" class="stage-wrap" hidden>
+    <div class="game-bar">
+      <span class="net-dot wait" id="netDot" title="Connection"></span>
+      <span id="netText">Connecting…</span>
+      <span class="join-hint" id="gameJoinHint"></span>
+      <span class="spacer"></span>
+      <span class="chip" id="playerCountChip">0 players</span>
+      <button class="btn btn-small" id="btnPause" hidden>⏸ Pause</button>
+      <button class="btn btn-small" id="btnSkip" hidden>⏭ Skip question</button>
+      <button class="btn btn-small" id="btnFullscreen" title="Full screen (F)">⛶</button>
+      <button class="btn btn-small btn-danger" id="btnEndGame">End game</button>
+    </div>
+    <div class="stage" id="stage"></div>
+    <div class="stage-foot" id="stageFoot"></div>
+  </div>
+
+  <!-- ============ Projector mode ============ -->
+  <div id="view-projector" class="stage-wrap" hidden>
+    <div class="game-bar">
+      <strong>📽 Projector mode</strong>
+      <span class="muted" id="projTitle"></span>
+      <span class="spacer"></span>
+      <button class="btn btn-small" id="projFullscreen" title="Full screen (F)">⛶</button>
+      <button class="btn btn-small btn-danger" id="projExit">Exit</button>
+    </div>
+    <div class="stage" id="projStage"></div>
+    <div class="stage-foot" id="projFoot"></div>
+    <div class="team-strip" id="teamStrip"></div>
+  </div>
+
+  <!-- ============ Paste dialog ============ -->
+  <dialog id="pasteDialog">
+    <form method="dialog" id="pasteForm">
+      <h2>Paste questions</h2>
+      <p class="hint">One question per block. Start each with <b>Q:</b>, list options as <b>A)</b> <b>B)</b>… and put <b>*</b> after the correct one.
+        For true/false or identification, write <b>Answer:</b> (separate alternative answers with <b>|</b>). Optional lines: <b>Time:</b>, <b>Explain:</b>, <b>Trick: yes</b>.
+        <button type="button" class="linkish" id="pasteExample">Insert an example</button></p>
+      <textarea id="pasteText" spellcheck="false" placeholder="Q: What is the minimum voting age in the Philippines?
+A) 16
+B) 18 *
+C) 21
+Explain: Article V, Section 1.
+
+Q: The President may be re-elected.
+Answer: False
+
+Q: What law is the Local Government Code of 1991?
+Answer: RA 7160 | Republic Act 7160 | Local Government Code"></textarea>
+      <div class="parse-report" id="pasteReport"></div>
+      <div class="row">
+        <label class="muted" for="pasteTarget">Add to:</label>
+        <select id="pasteTarget" style="width:auto"></select>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-ghost" id="pasteCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="pasteOk" disabled>Add questions</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="js/core.js"></script>
+  <script src="js/host-sets.js"></script>
+  <script src="js/host-game.js"></script>
+  <script src="js/host-projector.js"></script>
+  <script>Host.start();</script>
+</body>
+</html>
