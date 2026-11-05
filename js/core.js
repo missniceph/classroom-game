@@ -28,11 +28,11 @@
 
   CG.STORAGE_KEYS = {
     sets: 'classroomgame.sets.v1',
-    seeded: 'classroomgame.seeded.v1',
     activeGame: 'classroomgame.activeGame.v1',
     history: 'classroomgame.history.v1',
     projector: 'classroomgame.projector.v1',
-    player: 'classroomgame.player.v1'
+    player: 'classroomgame.player.v1',
+    removed: 'classroomgame.removed.v1'
   };
 
   /* ------------------------------------------------------------------ */
@@ -504,8 +504,11 @@
   };
 
   /** Load a script from the first URL that works (CDN with a backup CDN). */
+  var loading = {};
   CG.loadScript = function (urls, globalName) {
-    return new Promise(function (resolve, reject) {
+    var key = urls[0];
+    if (loading[key]) return loading[key];
+    var p = loading[key] = new Promise(function (resolve, reject) {
       if (globalName && root[globalName]) return resolve(root[globalName]);
       var i = 0;
       (function next() {
@@ -518,6 +521,8 @@
         document.head.appendChild(s);
       })();
     });
+    p.catch(function () { delete loading[key]; }); // allow a retry later
+    return p;
   };
   CG.LIBS = {
     peer: ['https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js', 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js'],
@@ -550,7 +555,7 @@
           options: ['16', '18', '21', '25'],
           correct: 1,
           time: 20,
-          explanation: 'Article V, Section 1: suffrage may be exercised by citizens at least 18 years old who have lived in the Philippines for at least one year, and where they propose to vote for at least six months, before the election.'
+          explanation: 'Article V, Section 1: citizens may vote if they are at least 18, have lived in the Philippines for at least one year, and have lived where they will vote for at least six months right before the election (unless disqualified by law).'
         },
         {
           type: 'tf',
@@ -568,7 +573,7 @@
         },
         {
           type: 'mc',
-          text: 'Which principle mainly decides Philippine citizenship at birth?',
+          text: 'Which principle mainly determines Philippine citizenship at birth?',
           options: ['Jus soli: being born on Philippine soil', 'Jus sanguinis: having a Filipino parent', 'Naturalization', 'Long residence in the Philippines'],
           correct: 1,
           time: 20,
@@ -577,10 +582,10 @@
         },
         {
           type: 'id',
-          text: 'Article II, Section 1: "Sovereignty resides in the ______ and all government authority emanates from them."',
-          accepted: ['people', 'the people', 'Filipino people', 'the Filipino people', 'mamamayan', 'taumbayan', 'sambayanan'],
+          text: 'Under Article II, Section 1 of the 1987 Constitution, sovereignty resides in the ______.',
+          accepted: ['people', 'the people', 'Filipino people', 'the Filipino people', 'taumbayan', 'sambayanan', 'mamamayan'],
           time: 25,
-          explanation: 'The Philippines is a democratic and republican State: sovereignty resides in the people.'
+          explanation: 'Article II, Section 1: sovereignty resides in the people, and all government authority comes from them.'
         }
       ]
     });

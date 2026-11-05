@@ -16,7 +16,7 @@ A free live quiz game for class, in the style of Kahoot. Made for PA 106 (Citize
 
 ## 1. One-time setup (about 5 minutes)
 
-1. Merge the changes into the `main` branch of this repository on GitHub.
+1. Make sure the latest changes are on the `main` branch of this repository on GitHub (merge the pull request if there is an open one).
 2. On GitHub, open the repository, then go to **Settings → Pages**.
 3. Under **Build and deployment**, set **Source** to *Deploy from a branch*, choose branch **`main`** and folder **`/ (root)`**, then click **Save**.
 4. Wait a minute or two. GitHub will show the site address, `https://missniceph.github.io/classroom-game/`.
@@ -67,7 +67,8 @@ You will find a **sample set of 5 questions** on citizenship and governance alre
 ### If something goes wrong
 
 - **A student's phone locks, loses signal or the page reloads.** The phone reconnects by itself, usually within a few seconds, and keeps its name and score. If the student closed the browser, they can open the link or scan the QR code again. They are put back into the game automatically. If their phone died completely, they can join from another phone **with the same nickname** and they keep their score.
-- **"That nickname is taken."** Two students chose the same name. Ask one to add an initial or a number.
+- **"… is already taken. Add an initial or a number."** Two students chose the same nickname. One of them just needs to change it slightly.
+- **You removed a player by mistake.** A removed phone cannot rejoin the same room, even with a new nickname. Let that student continue on another phone, or start a new room.
 - **Your laptop's tab reloads or the browser closes.** Open the host page again. A yellow banner says a game was interrupted. Click **Resume game**. The room code, players and scores are restored, and phones reconnect by themselves. If you were in the middle of a question, the game comes back paused so nobody loses time. Click **▶ Resume** when the phones are back.
 - **Students can't join at all** (the campus Wi-Fi blocks it, or the free connection server is down). Students on Wi-Fi can try switching to mobile data. If it still fails, click **End game** or **Close room** and use **Projector mode**.
 
@@ -190,7 +191,37 @@ So make a backup regularly, for example after preparing each lecture:
 - **Networks:** works on campus Wi-Fi or mobile data. Phones and laptop don't need to be on the same network. On very restrictive networks the connection goes through a free relay server, which can be a little slower.
 - **Number of students:** meant for a normal class of a few dozen phones. The first time you use it with a full class, do a quick trial round with the sample set.
 - **Keep the host tab open and visible.** You can switch to your slides and come back, but closing the tab ends the room (use **Resume game** to recover).
-- **Free services used:** [PeerJS](https://peerjs.com/) (its free public server, loaded from the jsDelivr CDN), a QR code library, and the Lexend font from Google Fonts. If a CDN is blocked, a second CDN is tried automatically.
+- **Free services used:** [PeerJS](https://peerjs.com/) (its free public server, loaded from the jsDelivr CDN), and a QR code library. If a CDN is blocked, a second CDN is tried automatically. The Lexend font is included in this repository, so it needs no outside service.
+
+---
+
+## What's here and how to update it
+
+You can change everything from the GitHub website. You don't need to install anything:
+1. Open a file on GitHub.
+2. Click the ✏️ pencil icon.
+3. Make your change.
+4. Click **Commit changes**.
+
+GitHub Pages updates the live site about a minute later. Students may need to refresh the page.
+
+| What you want to change | Where |
+|---|---|
+| Your question sets | Not in the repository. Use the host page (they are saved in your browser). Back them up with **Export all sets**. |
+| The 5 sample questions | `js/core.js`, near the bottom (`CG.sampleSet`) |
+| Words on the student (phone) screens | `js/student.js` |
+| Words on the teacher screens | `host.html`, `js/host-sets.js` (sets and editor), `js/host-game.js` (live game), `js/host-projector.js` (projector mode) |
+| Colours and sizes | `css/style.css`. The colours are listed at the top (`--opt-0` … `--opt-3` are the four answer colours). Keep text readable: check any new colour with a contrast checker (aim for at least 4.5:1). |
+| Default timer (20 s), points, room-code length | `js/core.js`, top section (`CG.DEFAULT_TIME`, `CG.pointsFor`) |
+| Page titles and share-preview text | The `<title>` and `og:` lines at the top of `index.html` and `host.html` |
+| Share-preview image | `assets/og-image.png` (1200 × 630 pixels). It was drawn from `assets/og-image.svg`. To replace it, upload any 1200 × 630 PNG with the same name. |
+| Browser-tab icon | `assets/favicon.svg`, `assets/favicon-32.png`, `assets/apple-touch-icon.png`, `favicon.ico` |
+| Instagram link | The footers of `index.html` and `host.html` |
+| This guide | `README.md` |
+
+**If the site address changes** (for example, you rename the repository or use your own domain), update the full addresses in the `og:url` and `og:image` lines of `index.html` and `host.html`. Otherwise the share preview won't show the image.
+
+**After changing anything,** run one quick test game with your phone before class.
 
 ---
 
@@ -207,6 +238,8 @@ js/host-sets.js     set list, editor, paste, import/export, past results
 js/host-game.js     live game host (PeerJS server side, game flow, scoring)
 js/host-projector.js projector mode
 js/student.js       phone client (join, auto-reconnect, answer screens)
+fonts/              Lexend font (variable woff2, SIL Open Font License: fonts/OFL.txt)
+assets/             favicon and share-preview image (SVG sources + PNG)
 tests/              automated tests (not needed to run the game)
 ```
 
@@ -224,5 +257,7 @@ npm test
 - `core.test.js` covers answer matching, scoring, the paste parser, CSV and the sample set.
 - `e2e-live.test.js` runs a full live game in a real browser: one host and three phones on a private local PeerJS server. It covers duplicate nicknames, a wrong room code, a phone that disconnects and rejoins, pause and resume, the host page reloading mid-game and resuming, identification matching, the trick reveal, accepting a typed answer, and the CSV export.
 - `e2e-host-ui.test.js` covers the editor, paste format errors, duplicate and delete, JSON export and import, and Projector mode (including resume after a refresh).
+- `e2e-extras.test.js` covers every remaining button and edge case: removing a player, skip, close room from the lobby, single-set export, import "keep both", a bad import file, past-results download and delete, "Not you?", Leave game, phone reload, keyboard-only use, and the projector-mode extras.
+- `audit.test.js` visits every screen at phone (360 px), tablet and laptop sizes, with the device set to light or dark mode. It checks accessibility with axe-core (WCAG 2 A/AA) and makes sure nothing scrolls sideways.
 
 Advanced: add `?peerserver=host:port` to the host page address to use your own PeerJS server instead of the free public one. The QR code passes the setting along to phones.

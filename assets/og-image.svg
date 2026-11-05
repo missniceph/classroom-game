@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <radialGradient id="g1" cx="0.1" cy="-0.1" r="0.9"><stop offset="0" stop-color="#3a2489"/><stop offset="1" stop-color="#15123a" stop-opacity="0"/></radialGradient>
+    <radialGradient id="g2" cx="1.05" cy="1.1" r="0.7"><stop offset="0" stop-color="#5b1747"/><stop offset="1" stop-color="#15123a" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#15123a"/>
+  <rect width="1200" height="630" fill="url(#g1)"/>
+  <rect width="1200" height="630" fill="url(#g2)"/>
+  <g transform="translate(80 92) rotate(-6 44 44)">
+    <rect width="88" height="88" rx="20" fill="#ffd23f"/>
+    <text x="44" y="68" text-anchor="middle" font-family="Lexend, sans-serif" font-weight="900" font-size="64" fill="#2a1f00">?</text>
+  </g>
+  <text x="196" y="160" font-family="Lexend, sans-serif" font-weight="900" font-size="76" fill="#fff">Classroom Game</text>
+  <text x="80" y="262" font-family="Lexend, sans-serif" font-weight="600" font-size="38" fill="#c9c4f0">A free live quiz for class. Join on your phone</text>
+  <text x="80" y="312" font-family="Lexend, sans-serif" font-weight="600" font-size="38" fill="#c9c4f0">with a room code. No app, no account.</text>
+  <g font-family="Lexend, sans-serif" font-weight="800" font-size="40">
+    <rect x="80" y="378" width="510" height="96" rx="20" fill="#d93a40"/>
+    <path d="M128 404 150 446H106z" fill="#fff"/><text x="176" y="440" fill="#fff">Citizenship</text>
+    <rect x="610" y="378" width="510" height="96" rx="20" fill="#3e63dd"/>
+    <path d="M660 402l22 22-22 22-22-22z" fill="#fff"/><text x="708" y="440" fill="#fff">Governance</text>
+    <rect x="80" y="490" width="510" height="96" rx="20" fill="#f5b400"/>
+    <circle cx="128" cy="538" r="20" fill="#2a1f00"/><text x="176" y="552" fill="#2a1f00">Rights</text>
+    <rect x="610" y="490" width="510" height="96" rx="20" fill="#21854f"/>
+    <rect x="642" y="520" width="36" height="36" fill="#fff"/><text x="708" y="552" fill="#fff">Elections</text>
+  </g>
+</svg>
