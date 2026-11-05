@@ -39,6 +39,9 @@
 
   function showForm(error) {
     stopped = true;
+    state = null;
+    pending = null;
+    clearInterval(barTimer);
     teardown();
     $('#joinForm').hidden = false;
     $('#screen').hidden = true;
@@ -59,8 +62,18 @@
     s.hidden = false;
     s.className = 's-center';
     s.style.cssText = '';
-    s.innerHTML = html;
+    s.innerHTML = html.replace(/class="s-emoji"/g, 'class="s-emoji" aria-hidden="true"');
     $('#footJoin').hidden = true;
+    announce(s.textContent);
+  }
+
+  /** Tell screen readers what changed (the visible screen is redrawn often). */
+  var lastAnnounced = '';
+  function announce(text) {
+    text = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+    if (!text || text === lastAnnounced) return;
+    lastAnnounced = text;
+    $('#announce').textContent = text;
   }
 
   function setNet(text, bad) {
@@ -202,9 +215,11 @@
         else { forgetMe(); showForm(msg.message || 'Could not join.'); }
         break;
       case 'kicked':
+        // Remember the removal for this room, so a new nickname on this phone is also refused.
+        if (me) CG.storage.set(K.removed, { room: me.room, pid: me.pid });
         stopped = true; forgetMe(); teardown(); setNet('');
         $('#head').hidden = true; $('#leaveBtn').hidden = true;
-        showScreen('<div class="s-emoji">🚪</div><div class="s-title">You were removed from the game</div><div class="s-sub">Ask your teacher if this was a mistake.</div><button class="btn btn-primary" id="again">Join again</button>');
+        showScreen('<div class="s-emoji">🚪</div><div class="s-title">You were removed from the game</div><div class="s-sub">Ask your teacher if this was a mistake.</div><button class="btn btn-primary" id="again">OK</button>');
         $('#again').onclick = function () { showForm(); };
         break;
       case 'closed':
@@ -243,7 +258,7 @@
   function render() {
     var s = state;
     clearInterval(barTimer);
-    if (!s) return;
+    if (!s || stopped) return; // nothing to draw after leaving / being removed
     var q = s.q;
 
     if (s.phase === 'lobby') {
@@ -309,8 +324,8 @@
   }
 
   function renderQuestion(q) {
-    var head = '<div class="s-qinfo" style="width:100%"><span>Q' + q.n + ' / ' + q.total + '</span><span id="secs"></span></div>' +
-      '<div class="s-timebar" style="width:100%"><div id="bar"></div></div>' +
+    var head = '<div class="s-qinfo" style="width:100%"><span><span aria-hidden="true">Q' + q.n + ' / ' + q.total + '</span><span class="sr-only">Question ' + q.n + ' of ' + q.total + '</span></span><span id="secs" aria-hidden="true"></span></div>' +
+      '<div class="s-timebar" style="width:100%" aria-hidden="true"><div id="bar"></div></div>' +
       '<div class="s-qtext">' + esc(q.text) + '</div>';
     var s = $('#screen');
     $('#joinForm').hidden = true;
@@ -330,12 +345,13 @@
       setTimeout(function () { var t = $('#typed'); if (t) t.focus(); }, 50);
     } else {
       s.innerHTML = head + '<div class="s-answers' + (q.options.length === 2 ? ' two' : '') + '">' + q.options.map(function (o, k) {
-        return '<button class="ans opt-' + k + '" data-k="' + k + '"><span class="shape">' + CG.SHAPES[k] + '</span><span>' + esc(o) + '</span></button>';
+        return '<button class="ans opt-' + k + '" data-k="' + k + '"><span class="shape" aria-hidden="true">' + CG.SHAPES[k] + '</span><span>' + esc(o) + '</span></button>';
       }).join('') + '</div>';
       s.querySelectorAll('.ans').forEach(function (b) {
         b.onclick = function () { b.classList.add('picked'); submit(q.i, Number(b.dataset.k)); };
       });
     }
+    announce('Question ' + q.n + ' of ' + q.total + ': ' + q.text + (q.type === 'id' ? ' Type your answer.' : ' Choose: ' + q.options.join(', ')));
     var tickBar = function () {
       var bar = $('#bar');
       if (!bar || !state || state.phase !== 'question') { clearInterval(barTimer); return; }
@@ -378,10 +394,13 @@
     e.preventDefault();
     var room = CG.cleanRoomCode($('#code').value);
     var name = CG.cleanName($('#nick').value);
-    if (room.length !== CG.ROOM_LENGTH) { showForm('The room code has ' + CG.ROOM_LENGTH + ' letters/numbers. Check the big screen.'); $('#code').focus(); return; }
+    if (room.length !== CG.ROOM_LENGTH) { showForm('The room code has ' + CG.ROOM_LENGTH + ' characters. Check the code on the big screen.'); $('#code').focus(); return; }
     if (!name) { showForm('Please type a nickname.'); $('#nick').focus(); return; }
     var old = CG.storage.get(K.player, null);
-    me = { room: room, name: name, pid: old && old.room === room && old.name === name && old.pid ? old.pid : CG.makeId('p_') };
+    var removed = CG.storage.get(K.removed, null);
+    var pid = removed && removed.room === room ? removed.pid
+      : old && old.room === room && old.name === name && old.pid ? old.pid : CG.makeId('p_');
+    me = { room: room, name: name, pid: pid };
     saveMe();
     try { history.replaceState(null, '', location.pathname + '?room=' + room + (CG.peerServerParam() ? '&peerserver=' + encodeURIComponent(CG.peerServerParam()) : '')); } catch (err) { /* ignore */ }
     $('#joinBtn').disabled = true;
@@ -404,6 +423,8 @@
   });
   window.addEventListener('online', function () { if (!stopped && me && !connected) { attempt = 0; scheduleRetry('online again'); } });
   pingTimer = setInterval(watchdog, PING_MS);
+  // Start downloading the connection library now, while the student types their name.
+  CG.loadScript(CG.LIBS.peer, 'Peer').catch(function () { /* retried when joining */ });
 
   // Fill in the room code from the QR link, and rejoin automatically after a reload.
   var params = new URLSearchParams(location.search);

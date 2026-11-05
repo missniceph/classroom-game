@@ -26,7 +26,7 @@ async function shot(page, name) { if (SHOTS) await page.screenshot({ path: path.
     watch(host, 'host');
     await host.goto(srv.base + 'host.html?' + srv.peerParam);
     await host.waitForSelector('.set-card');
-    assert.match(await host.textContent('.set-card h3'), /Sample: Citizenship/);
+    assert.match(await host.textContent('.set-card h2'), /Sample: Citizenship/);
     await shot(host, '01-host-sets');
     await host.click('.set-card [data-act=play]');
     await host.waitForFunction(() => document.querySelector('#netText').textContent === 'Online', null, { timeout: 15000 });

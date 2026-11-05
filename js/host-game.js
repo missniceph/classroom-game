@@ -464,7 +464,8 @@ Host.Game = (function (H) {
   function showFullResults() {
     var rows = resultRows();
     var d = document.createElement('dialog');
-    d.innerHTML = '<h2>All results — ' + esc(G.set.title) + '</h2><div style="overflow:auto;max-height:65vh"><table class="results-table"><thead><tr>' +
+    d.setAttribute('aria-labelledby', 'allResultsTitle');
+    d.innerHTML = '<h2 id="allResultsTitle">All results — ' + esc(G.set.title) + '</h2><div style="overflow:auto;max-height:65vh" tabindex="0" role="region" aria-label="Results table"><table class="results-table"><thead><tr>' +
       rows[0].slice(0, 7).map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       rows.slice(1).map(function (r) { return '<tr>' + r.slice(0, 7).map(function (c) { return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('') +
       '</tbody></table></div><div class="row" style="margin-top:1em"><span class="spacer"></span><button class="btn" data-x="csv">⬇ Download CSV</button><button class="btn btn-primary" data-x="close">Close</button></div>';
@@ -484,7 +485,7 @@ Host.Game = (function (H) {
   /* ------------------------------------------------------------------ */
 
   function optionHtml(q, k, extra) {
-    return '<div class="option opt-' + k + (extra && extra.cls ? ' ' + extra.cls : '') + '"><span class="shape">' + CG.SHAPES[k] + '</span>' +
+    return '<div class="option opt-' + k + (extra && extra.cls ? ' ' + extra.cls : '') + '"><span class="shape" aria-hidden="true">' + CG.SHAPES[k] + '</span>' +
       '<span class="opt-label">' + esc(q.options[k]) + '</span>' + (extra && extra.after ? extra.after : '') + '</div>';
   }
 
@@ -499,7 +500,7 @@ Host.Game = (function (H) {
         '<div class="join-panel card">' +
         '<div class="step">1. On your phone, go to</div><div class="url">' + esc(shortUrl()) + '</div>' +
         '<div class="step" style="margin-top:0.5em">2. Enter the room code</div><div class="room-code" id="roomCode">' + esc(G.room) + '</div>' +
-        '<div class="qr" id="qrBox" aria-label="QR code to join"></div><div class="step" style="font-size:1rem;margin-top:0.4em">or scan the QR code</div></div>' +
+        '<div class="qr" id="qrBox" role="img" aria-label="QR code that opens the join page with this room code"></div><div class="step" style="font-size:1rem;margin-top:0.4em">or scan the QR code</div></div>' +
         '<div><div class="players-head"><span class="count" id="lobbyCount">0</span> <span>joined</span></div>' +
         '<div class="player-cloud" id="playerCloud"></div>' +
         '<p class="muted lobby-note">' + esc(G.set.title) + ' · ' + plural(total(), 'question') + '. Click a name to remove a player. ' +
@@ -606,7 +607,7 @@ Host.Game = (function (H) {
       h += '<div class="options">' + q.options.map(function (o, k) {
         return optionHtml(q, k, {
           cls: k === q.correct ? 'right' : 'dim',
-          after: (k === q.correct ? '<span class="check-mark">✓</span>' : '') + '<span class="tally">' + counts[k] + '</span><span class="bar" data-w="' + (100 * counts[k] / max) + '"></span>'
+          after: (k === q.correct ? '<span class="check-mark" aria-label="correct answer">✓</span>' : '') + '<span class="tally"><span class="sr-only">answers: </span>' + counts[k] + '</span><span class="bar" data-w="' + (100 * counts[k] / max) + '"></span>'
         });
       }).join('') + '</div>';
     }
@@ -622,6 +623,7 @@ Host.Game = (function (H) {
       shownTrickFor = G.qIndex;
       var ov = document.createElement('div');
       ov.className = 'trick-overlay';
+      ov.setAttribute('aria-hidden', 'true');
       ov.innerHTML = '<div class="stamp">🎭 Trick<br>question!<small>Not what it seemed…</small></div>';
       document.body.appendChild(ov);
       setTimeout(function () { ov.remove(); }, 2700);
@@ -651,7 +653,7 @@ Host.Game = (function (H) {
     cloud.innerHTML = list.length ? list.map(function (p) {
       var isNew = !tagsShown[p.pid];
       tagsShown[p.pid] = true;
-      return '<button class="player-tag' + (isNew ? ' new' : '') + (isOnline(p.pid) ? '' : ' off') + '" data-pid="' + esc(p.pid) + '" title="Click to remove">' + esc(p.name) + '</button>';
+      return '<button class="player-tag' + (isNew ? ' new' : '') + (isOnline(p.pid) ? '' : ' off') + '" data-pid="' + esc(p.pid) + '" title="Click to remove" aria-label="' + esc(p.name) + (isOnline(p.pid) ? '' : ' (offline)') + '. Click to remove from the game">' + esc(p.name) + '</button>';
     }).join('') : '<span class="lobby-empty">Waiting for students to join…</span>';
   }
 
@@ -740,6 +742,8 @@ Host.Game = (function (H) {
       if (tag && G) kick(tag.dataset.pid);
     });
     $('#btnPause').onclick = function () { togglePause(); };
+    // After a mouse click, give focus back to the page so Space/P/F shortcuts keep working.
+    $('#view-game').addEventListener('click', H.blurAfterMouse);
     $('#btnSkip').onclick = function () { if (confirm('Skip this question? Nobody gets points for it.')) skip(); };
     $('#btnFullscreen').onclick = H.toggleFullscreen;
     $('#btnEndGame').onclick = function () {
@@ -749,7 +753,7 @@ Host.Game = (function (H) {
     };
     document.addEventListener('keydown', function (e) {
       if (H.view !== 'game' || !G) return;
-      if (e.target.closest('input, textarea, select, dialog') || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (H.skipShortcut(e)) return;
       if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowRight' || e.key === 'PageDown') {
         if (G.phase !== 'podium') { e.preventDefault(); next(); }
       } else if (e.key === 'p' || e.key === 'P') togglePause();

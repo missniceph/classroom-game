@@ -21,6 +21,25 @@ var Host = (function () {
     ['home', 'editor', 'game', 'projector'].forEach(function (v) { $('#view-' + v).hidden = v !== name; });
     H.view = name;
     window.scrollTo(0, 0);
+    // Move keyboard / screen-reader focus to the new screen's heading.
+    var h1 = $('#view-' + name + ' h1');
+    if (h1 && !$('#view-' + name).contains(document.activeElement)) { try { h1.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+  };
+
+  /**
+   * Should a shortcut key be left to the browser? Yes while typing in a field or inside a dialog,
+   * and for Space/Enter on a focused button or link (so it is pressed once, not twice).
+   */
+  H.skipShortcut = function (e) {
+    var el = e.target;
+    if (e.ctrlKey || e.metaKey || e.altKey || !el || !el.closest) return true;
+    if (el.closest('input, textarea, select, dialog, [contenteditable]')) return true;
+    return (e.key === ' ' || e.key === 'Enter') && !!el.closest('button, a[href], [role=button]');
+  };
+  /** After a mouse click, take focus off the button so keyboard shortcuts keep working. */
+  H.blurAfterMouse = function (e) {
+    var a = document.activeElement;
+    if (e.detail > 0 && a && a.tagName === 'BUTTON') a.blur();
   };
 
   var toastTimer;
@@ -40,7 +59,25 @@ var Host = (function () {
       CG.storage.set(K.sets, stored);
     }
     H.sets = stored.map(CG.cleanSet);
+    upgradeSample();
   };
+
+  /** If the untouched sample set from an earlier version is stored, refresh its wording. */
+  function upgradeSample() {
+    var old = H.getSet('set_sample_pa106');
+    if (!old) return;
+    var fresh = CG.sampleSet();
+    var changed = false;
+    [[0, /suffrage may be exercised by citizens at least 18/], [3, /^Which principle mainly decides/], [4, /emanates from them/]].forEach(function (rule) {
+      var q = old.questions[rule[0]], f = fresh.questions[rule[0]];
+      if (q && f && q.type === f.type && rule[1].test(q.text + '|' + q.explanation)) {
+        q.text = f.text; q.explanation = f.explanation;
+        if (f.accepted) q.accepted = f.accepted;
+        changed = true;
+      }
+    });
+    if (changed) CG.storage.set(K.sets, H.sets);
+  }
 
   H.saveSets = function () {
     var ok = CG.storage.set(K.sets, H.sets);
@@ -77,17 +114,17 @@ var Host = (function () {
         s.questions.forEach(function (q) { types[q.type] = (types[q.type] || 0) + 1; });
         var typeText = Object.keys(types).map(function (t) { return types[t] + ' ' + CG.TYPE_LABELS[t].toLowerCase(); }).join(', ');
         return '<div class="card set-card" data-id="' + esc(s.id) + '">' +
-          '<h3>' + esc(s.title) + '</h3>' +
+          '<h2>' + esc(s.title) + '</h2>' +
           '<div class="meta">' + plural(s.questions.length, 'question') + (typeText ? ' · ' + esc(typeText) : '') +
           '<br>Updated ' + esc(CG.formatDateTime(s.updatedAt).slice(0, 16)) + '</div>' +
           (issues.length ? '<div><span class="chip warn">⚠ ' + (issues[0].index < 0 ? 'No questions yet' : plural(issues.length, 'question') + ' need fixing') + '</span></div>' : '') +
           '<div class="actions">' +
-          '<button class="btn btn-primary btn-small" data-act="play">▶ Play live</button>' +
-          '<button class="btn btn-small" data-act="projector">📽 Projector mode</button>' +
-          '<button class="btn btn-small" data-act="edit">✏️ Edit</button>' +
-          '<button class="btn btn-small" data-act="dup">⧉ Duplicate</button>' +
-          '<button class="btn btn-small" data-act="export">⬇ Export</button>' +
-          '<button class="btn btn-small btn-ghost" data-act="delete" title="Delete set">🗑 Delete</button>' +
+          '<button class="btn btn-primary btn-small" data-act="play" aria-label="Play live: ' + esc(s.title) + '">▶ Play live</button>' +
+          '<button class="btn btn-small" data-act="projector" aria-label="Projector mode: ' + esc(s.title) + '">📽 Projector mode</button>' +
+          '<button class="btn btn-small" data-act="edit" aria-label="Edit ' + esc(s.title) + '">✏️ Edit</button>' +
+          '<button class="btn btn-small" data-act="dup" aria-label="Duplicate ' + esc(s.title) + '">⧉ Duplicate</button>' +
+          '<button class="btn btn-small" data-act="export" aria-label="Export ' + esc(s.title) + ' as a JSON file">⬇ Export</button>' +
+          '<button class="btn btn-small btn-ghost" data-act="delete" aria-label="Delete ' + esc(s.title) + '">🗑 Delete</button>' +
           '</div></div>';
       }).join('');
     }
@@ -241,7 +278,7 @@ var Host = (function () {
         '<span class="muted">' + esc(CG.formatDateTime(h.startedAt).slice(0, 16)) + ' · ' + esc(h.kind === 'projector' ? 'Projector mode, ' + plural(h.rows.length - 1, 'team') : plural(h.rows.length - 1, 'player')) + ' · room ' + esc(h.room) + '</span>' +
         '<span class="spacer"></span>' +
         '<button class="btn btn-small" data-hact="csv">⬇ Download CSV</button>' +
-        '<button class="btn btn-small btn-ghost" data-hact="del" title="Remove from this list">🗑</button></div>';
+        '<button class="btn btn-small btn-ghost" data-hact="del" title="Remove from this list" aria-label="Remove these results from the list">🗑</button></div>';
     }).join('');
   };
 
@@ -285,7 +322,7 @@ var Host = (function () {
     if ($('#btnResumeGame')) {
       $('#btnResumeGame').onclick = function () { H.Game.resume(g); };
       $('#btnDiscardGame').onclick = function () {
-        if (confirm('Discard this game? If it had finished, its results are kept under "Past game results".')) { CG.storage.remove(K.activeGame); H.renderResumeBanner(); }
+        if (confirm('Discard this game? If it had finished, its results are kept under “Past game results”.')) { CG.storage.remove(K.activeGame); H.renderResumeBanner(); }
       };
     }
     if ($('#btnResumeProj')) {
@@ -327,19 +364,19 @@ var Host = (function () {
   }
   H.flushEditorSave = function () { if (ed.saveTimer) flushSave(); };
 
-  function shapeSwatch(k) { return '<span class="swatch opt-' + k + '">' + CG.SHAPES[k] + '</span>'; }
+  function shapeSwatch(k) { return '<span class="swatch opt-' + k + '" aria-hidden="true">' + CG.SHAPES[k] + '</span>'; }
 
   function questionHtml(q, i) {
     var problems = CG.validateQuestion(q);
-    var h = '<div class="card q-card' + (problems.length ? ' invalid' : '') + '" data-i="' + i + '">';
+    var h = '<div class="card q-card' + (problems.length ? ' invalid' : '') + '" data-i="' + i + '" role="group" aria-label="Question ' + (i + 1) + '">';
     h += '<div class="q-card-head"><span class="q-num">Q' + (i + 1) + '</span>' +
-      '<select data-f="type" aria-label="Question type">' +
+      '<select data-f="type" aria-label="Question ' + (i + 1) + ' type">' +
       ['mc', 'tf', 'id'].map(function (t) { return '<option value="' + t + '"' + (q.type === t ? ' selected' : '') + '>' + CG.TYPE_LABELS[t] + '</option>'; }).join('') +
       '</select><span class="spacer"></span>' +
-      '<button class="btn btn-small btn-ghost" data-act="up" title="Move up"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
-      '<button class="btn btn-small btn-ghost" data-act="down" title="Move down"' + (i === ed.set.questions.length - 1 ? ' disabled' : '') + '>↓</button>' +
-      '<button class="btn btn-small btn-ghost" data-act="dup" title="Duplicate question">⧉</button>' +
-      '<button class="btn btn-small btn-ghost" data-act="del" title="Delete question">🗑</button></div>';
+      '<button class="btn btn-small btn-ghost" data-act="up" title="Move up" aria-label="Move question ' + (i + 1) + ' up"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+      '<button class="btn btn-small btn-ghost" data-act="down" title="Move down" aria-label="Move question ' + (i + 1) + ' down"' + (i === ed.set.questions.length - 1 ? ' disabled' : '') + '>↓</button>' +
+      '<button class="btn btn-small btn-ghost" data-act="dup" title="Duplicate question" aria-label="Duplicate question ' + (i + 1) + '">⧉</button>' +
+      '<button class="btn btn-small btn-ghost" data-act="del" title="Delete question" aria-label="Delete question ' + (i + 1) + '">🗑</button></div>';
     h += '<div class="field"><label for="qt' + i + '">Question</label><textarea id="qt' + i + '" rows="2" data-f="text" placeholder="Type the question">' + esc(q.text) + '</textarea></div>';
 
     if (q.type === 'mc') {
@@ -349,7 +386,7 @@ var Host = (function () {
           '<input data-f="opt" data-k="' + k + '" value="' + esc(o) + '" placeholder="Option ' + CG.LETTERS[k] + '" aria-label="Option ' + CG.LETTERS[k] + '">' +
           '<input type="radio" name="correct' + i + '" data-f="correct" value="' + k + '"' + (q.correct === k ? ' checked' : '') + ' aria-label="Option ' + CG.LETTERS[k] + ' is correct" id="c' + i + '_' + k + '">' +
           '<label class="correct-label" for="c' + i + '_' + k + '">' + (q.correct === k ? '✓ Correct' : 'Correct?') + '</label>' +
-          '<button class="btn btn-small btn-ghost" data-act="delopt" data-k="' + k + '" title="Remove option"' + (q.options.length <= 2 ? ' disabled' : '') + '>✕</button></div>';
+          '<button class="btn btn-small btn-ghost" data-act="delopt" data-k="' + k + '" title="Remove option" aria-label="Remove option ' + CG.LETTERS[k] + '"' + (q.options.length <= 2 ? ' disabled' : '') + '>✕</button></div>';
       });
       if (q.options.length < 4) h += '<button class="btn btn-small" data-act="addopt">＋ Add option</button>';
       h += '</div>';
@@ -366,10 +403,10 @@ var Host = (function () {
 
     h += '<div class="q-extras">' +
       '<div class="field"><label for="qs' + i + '">Time (seconds)</label><input type="number" id="qs' + i + '" min="' + CG.MIN_TIME + '" max="' + CG.MAX_TIME + '" step="5" data-f="time" value="' + q.time + '"></div>' +
-      '<label class="check" title="Shows a dramatic “Trick question!” reveal"><input type="checkbox" data-f="trick"' + (q.trick ? ' checked' : '') + '> 🎭 Trick question</label></div>';
+      '<label class="check" title="Shows a dramatic “Trick question!” reveal"><input type="checkbox" data-f="trick"' + (q.trick ? ' checked' : '') + '> <span aria-hidden="true">🎭</span> Trick question</label></div>';
     h += '<div class="field" style="margin-top:0.9em"><label for="qe' + i + '">Explanation <small>(optional, shown after the answer is revealed)</small></label>' +
       '<textarea id="qe' + i + '" rows="2" data-f="explanation" placeholder="Why is this the answer? e.g. Article V, Section 1">' + esc(q.explanation) + '</textarea></div>';
-    h += '<ul class="problems">' + problems.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>';
+    h += '<ul class="problems" aria-live="polite">' + problems.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>';
     return h + '</div>';
   }
 

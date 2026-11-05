@@ -2,13 +2,28 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Classroom Game · Host</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#15123a">
+  <title>Classroom Game: host a live quiz</title>
+  <meta name="description" content="Run a free, Kahoot-style live quiz in class. Project this screen; students join on their phones with a room code. No accounts, no fees.">
   <meta name="robots" content="noindex">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23ffd23f%22/><text x=%2250%22 y=%2270%22 font-size=%2260%22 text-anchor=%22middle%22>?</text></svg>">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <!-- Share preview (Facebook, Messenger, Viber, X, LinkedIn…) -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Classroom Game">
+  <meta property="og:title" content="Classroom Game: host a live quiz">
+  <meta property="og:description" content="Run a free, Kahoot-style live quiz in class. Project this screen; students join on their phones with a room code. No accounts, no fees.">
+  <meta property="og:url" content="https://missniceph.github.io/classroom-game/host.html">
+  <meta property="og:image" content="https://missniceph.github.io/classroom-game/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Classroom Game: four colourful answer buttons and the words “A free live quiz for class”.">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preload" href="fonts/lexend-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -16,15 +31,15 @@
   <!-- ============ Sets (home) ============ -->
   <div id="view-home" hidden>
     <header class="host-header">
-      <div class="brand"><span class="brand-mark">?</span> Classroom Game</div>
+      <div class="brand"><span class="brand-mark" aria-hidden="true">?</span> Classroom Game</div>
       <span class="muted">Host</span>
       <span class="spacer"></span>
-      <a class="btn btn-ghost btn-small" href="./" target="_blank" rel="noopener">Open student page ↗</a>
+      <a class="btn btn-ghost btn-small" href="./" target="_blank" rel="noopener">Open student page ↗<span class="sr-only"> (opens in a new tab)</span></a>
     </header>
     <main class="view">
       <div id="resumeBanner" class="banner" hidden></div>
 
-      <h1>Your question sets</h1>
+      <h1 tabindex="-1">Your question sets</h1>
       <div class="toolbar">
         <button class="btn btn-primary" id="btnNewSet">＋ New set</button>
         <button class="btn" id="btnPaste">📋 Paste questions</button>
@@ -38,15 +53,16 @@
       <p class="muted">Saved only in this browser on this laptop. Download the CSV for your records.</p>
       <div id="historyList" class="history-list"></div>
     </main>
+    <footer class="site-footer">Classroom Game · free and open · made by <a href="https://instagram.com/missniceph" target="_blank" rel="noopener">@missniceph</a></footer>
   </div>
 
   <!-- ============ Editor ============ -->
   <div id="view-editor" hidden>
     <header class="host-header">
       <button class="btn btn-ghost btn-small" id="btnEditorBack">← All sets</button>
-      <div class="brand"><span class="brand-mark">?</span> Edit set</div>
+      <h1 class="brand" style="font-size:1.25rem;margin:0" tabindex="-1"><span class="brand-mark" aria-hidden="true">?</span> Edit set</h1>
       <span class="spacer"></span>
-      <span class="save-state" id="saveState">All changes saved</span>
+      <span class="save-state" id="saveState" role="status">All changes saved</span>
     </header>
     <main class="view">
       <div class="editor-head">
@@ -71,43 +87,49 @@
 
   <!-- ============ Live game ============ -->
   <div id="view-game" class="stage-wrap" hidden>
-    <div class="game-bar">
-      <span class="net-dot wait" id="netDot" title="Connection"></span>
-      <span id="netText">Connecting…</span>
+    <header class="game-bar">
+      <h1 class="sr-only" tabindex="-1">Live game</h1>
+      <span class="net-dot wait" id="netDot" aria-hidden="true"></span>
+      <span id="netText" role="status">Connecting…</span>
       <span class="join-hint" id="gameJoinHint"></span>
       <span class="spacer"></span>
       <span class="chip" id="playerCountChip">0 players</span>
       <button class="btn btn-small" id="btnPause" hidden>⏸ Pause</button>
       <button class="btn btn-small" id="btnSkip" hidden>⏭ Skip question</button>
-      <button class="btn btn-small" id="btnFullscreen" title="Full screen (F)">⛶</button>
+      <button class="btn btn-small" id="btnFullscreen" title="Full screen (F)" aria-label="Full screen">⛶</button>
       <button class="btn btn-small btn-danger" id="btnEndGame">End game</button>
-    </div>
-    <div class="stage" id="stage"></div>
-    <div class="stage-foot" id="stageFoot"></div>
+    </header>
+    <main class="stage-wrap" style="min-height:0;flex:1">
+      <div class="stage" id="stage"></div>
+      <div class="stage-foot" id="stageFoot"></div>
+    </main>
   </div>
 
   <!-- ============ Projector mode ============ -->
   <div id="view-projector" class="stage-wrap" hidden>
-    <div class="game-bar">
-      <strong>📽 Projector mode</strong>
+    <header class="game-bar">
+      <h1 class="sr-only" tabindex="-1">Projector mode</h1>
+      <strong aria-hidden="true">📽 Projector mode</strong>
       <span class="muted" id="projTitle"></span>
       <span class="spacer"></span>
-      <button class="btn btn-small" id="projFullscreen" title="Full screen (F)">⛶</button>
+      <button class="btn btn-small" id="projFullscreen" title="Full screen (F)" aria-label="Full screen">⛶</button>
       <button class="btn btn-small btn-danger" id="projExit">Exit</button>
-    </div>
-    <div class="stage" id="projStage"></div>
-    <div class="stage-foot" id="projFoot"></div>
-    <div class="team-strip" id="teamStrip"></div>
+    </header>
+    <main class="stage-wrap" style="min-height:0;flex:1">
+      <div class="stage" id="projStage"></div>
+      <div class="stage-foot" id="projFoot"></div>
+      <div class="team-strip" id="teamStrip" role="group" aria-label="Team scores"></div>
+    </main>
   </div>
 
   <!-- ============ Paste dialog ============ -->
-  <dialog id="pasteDialog">
+  <dialog id="pasteDialog" aria-labelledby="pasteTitle">
     <form method="dialog" id="pasteForm">
-      <h2>Paste questions</h2>
+      <h2 id="pasteTitle">Paste questions</h2>
       <p class="hint">One question per block. Start each with <b>Q:</b>, list options as <b>A)</b> <b>B)</b>… and put <b>*</b> after the correct one.
         For true/false or identification, write <b>Answer:</b> (separate alternative answers with <b>|</b>). Optional lines: <b>Time:</b>, <b>Explain:</b>, <b>Trick: yes</b>.
         <button type="button" class="linkish" id="pasteExample">Insert an example</button></p>
-      <textarea id="pasteText" spellcheck="false" placeholder="Q: What is the minimum voting age in the Philippines?
+      <textarea id="pasteText" spellcheck="false" aria-label="Questions to paste" aria-describedby="pasteReport" placeholder="Q: What is the minimum voting age in the Philippines?
 A) 16
 B) 18 *
 C) 21
@@ -118,7 +140,7 @@ Answer: False
 
 Q: What law is the Local Government Code of 1991?
 Answer: RA 7160 | Republic Act 7160 | Local Government Code"></textarea>
-      <div class="parse-report" id="pasteReport"></div>
+      <div class="parse-report" id="pasteReport" aria-live="polite"></div>
       <div class="row">
         <label class="muted" for="pasteTarget">Add to:</label>
         <select id="pasteTarget" style="width:auto"></select>

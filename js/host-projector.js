@@ -54,9 +54,9 @@ Host.Projector = (function (H) {
     $('#projStage').innerHTML = '<div class="view teams-setup" style="margin:0 auto;width:100%">' +
       '<h1>Set up teams</h1><p class="muted">Projector mode needs no phones and no internet. You show each question, reveal the answer, then tap a team to give it a point.</p>' +
       '<div id="teamInputs">' + P.teams.map(function (t, i) {
-        return '<div class="team-input-row"><span class="swatch team-' + i + '" style="width:2.6em;border-radius:10px"></span>' +
+        return '<div class="team-input-row"><span class="swatch team-' + i + '" style="width:2.6em;border-radius:10px" aria-hidden="true"></span>' +
           '<input data-team="' + i + '" value="' + esc(t.name) + '" maxlength="24" aria-label="Team ' + (i + 1) + ' name">' +
-          '<button class="btn btn-ghost" data-rm="' + i + '"' + (P.teams.length <= 2 ? ' disabled' : '') + ' title="Remove team">✕</button></div>';
+          '<button class="btn btn-ghost" data-rm="' + i + '"' + (P.teams.length <= 2 ? ' disabled' : '') + ' title="Remove team" aria-label="Remove team ' + (i + 1) + '">✕</button></div>';
       }).join('') + '</div>' +
       (P.teams.length < 8 ? '<button class="btn" id="addTeam">＋ Add team</button>' : '') +
       '<p class="muted">' + esc(P.set.title) + ' · ' + plural(P.set.questions.length, 'question') + '</p></div>';
@@ -75,8 +75,8 @@ Host.Projector = (function (H) {
   function optionsHtml(q, revealed) {
     return '<div class="options">' + q.options.map(function (o, k) {
       var cls = revealed ? (k === q.correct ? ' right' : ' dim') : '';
-      return '<div class="option opt-' + k + cls + '"><span class="shape">' + CG.SHAPES[k] + '</span><span class="opt-label">' + esc(o) + '</span>' +
-        (revealed && k === q.correct ? '<span class="check-mark">✓</span>' : '') + '</div>';
+      return '<div class="option opt-' + k + cls + '"><span class="shape" aria-hidden="true">' + CG.SHAPES[k] + '</span><span class="opt-label">' + esc(o) + '</span>' +
+        (revealed && k === q.correct ? '<span class="check-mark" aria-label="correct answer">✓</span>' : '') + '</div>';
     }).join('') + '</div>';
   }
 
@@ -116,6 +116,7 @@ Host.Projector = (function (H) {
       P.trickShown = P.qIndex;
       var ov = document.createElement('div');
       ov.className = 'trick-overlay';
+      ov.setAttribute('aria-hidden', 'true');
       ov.innerHTML = '<div class="stamp">🎭 Trick<br>question!<small>Not what it seemed…</small></div>';
       document.body.appendChild(ov);
       setTimeout(function () { ov.remove(); }, 2700);
@@ -124,9 +125,10 @@ Host.Projector = (function (H) {
 
   function renderTeams() {
     $('#teamStrip').innerHTML = P.teams.map(function (t, i) {
-      return '<div class="team-tile team-' + i + '" data-tadd="' + i + '" role="button" tabindex="0" aria-label="Add a point to ' + esc(t.name) + '">' +
-        '<button class="minus" data-tsub="' + i + '" title="Take a point away" aria-label="Take a point from ' + esc(t.name) + '">−</button>' +
-        '<span class="tname">' + esc(t.name) + '</span><span class="tscore">' + t.score + '</span><span class="tplus">tap +1 · key ' + (i + 1) + '</span></div>';
+      return '<div class="team-tile team-' + i + '">' +
+        '<button class="tadd" data-tadd="' + i + '" aria-label="' + esc(t.name) + ': ' + plural(t.score, 'point') + '. Add a point">' +
+        '<span class="tname">' + esc(t.name) + '</span><span class="tscore">' + t.score + '</span><span class="tplus" aria-hidden="true">tap +1 · key ' + (i + 1) + '</span></button>' +
+        '<button class="minus" data-tsub="' + i + '" title="Take a point away" aria-label="Take a point from ' + esc(t.name) + '">−</button></div>';
     }).join('');
   }
 
@@ -134,9 +136,13 @@ Host.Projector = (function (H) {
     var t = P.teams[i];
     if (!t || P.phase !== 'play') return;
     t.score = Math.max(0, t.score + delta);
+    // Keep keyboard focus on the same button after the tiles are redrawn.
+    var ae = document.activeElement;
+    var focused = ae && ae.dataset && (ae.dataset.tadd != null ? 'data-tadd="' + ae.dataset.tadd + '"' : ae.dataset.tsub != null ? 'data-tsub="' + ae.dataset.tsub + '"' : null);
     renderTeams();
-    var tile = document.querySelector('[data-tadd="' + i + '"]');
-    if (tile && delta > 0) tile.classList.add('bump');
+    var btn = document.querySelector('[data-tadd="' + i + '"]');
+    if (btn && delta > 0) btn.parentNode.classList.add('bump');
+    if (focused) { var again = document.querySelector('[' + focused + ']'); if (again) again.focus(); }
     save();
   }
 
@@ -261,10 +267,11 @@ Host.Projector = (function (H) {
       if (add) addPoint(Number(add.dataset.tadd), 1);
     });
     $('#projExit').onclick = exit;
+    $('#view-projector').addEventListener('click', H.blurAfterMouse);
     $('#projFullscreen').onclick = H.toggleFullscreen;
     document.addEventListener('keydown', function (e) {
       if (H.view !== 'projector' || !P) return;
-      if (e.target.closest('input, textarea, select, dialog') || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (H.skipShortcut(e)) return;
       if (/^[1-8]$/.test(e.key)) { addPoint(Number(e.key) - 1, 1); return; }
       if (e.key === 'f' || e.key === 'F') { H.toggleFullscreen(); return; }
       if ((e.key === 't' || e.key === 'T') && P.phase === 'play') { toggleTimer(); return; }

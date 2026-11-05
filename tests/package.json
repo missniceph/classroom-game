@@ -3,9 +3,10 @@
   "private": true,
   "description": "Developer tests for Classroom Game. Not needed to run the game.",
   "scripts": {
-    "test": "node core.test.js && node e2e-live.test.js && node e2e-host-ui.test.js"
+    "test": "node core.test.js && node e2e-live.test.js && node e2e-host-ui.test.js && node e2e-extras.test.js && node audit.test.js"
   },
   "devDependencies": {
+    "axe-core": "4.10.2",
     "peer": "1.0.2",
     "peerjs": "1.5.4",
     "playwright": "^1.48.0",
